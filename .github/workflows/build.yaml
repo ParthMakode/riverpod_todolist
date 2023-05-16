@@ -3,10 +3,7 @@ name: Build and Release APK
 on:
   push:
     branches:
-      - m
-  create:
-    tags:
-      - v*
+      - main
 
 jobs:
   build:
@@ -18,26 +15,34 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.x'
-      
+
       - name: Checkout code
         uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-      
+
       - name: Get dependencies
         run: flutter pub get
-      
+
       - name: Build APK
         run: flutter build apk
 
-      - name: Create github artifact release # disable this to save storage
-        uses: ncipollo/release-action@v1
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.TOKEN }}
         with:
-          artifacts: "build/app/outputs/apk/release/*.apk,build/app/outputs/bundle/release/app-release.aab"
-          token: ${{ secrets.GITHUB_TOKEN }} # this is automatically provided by github
-          # commit: ${{!github!}}
-      - name: Upload app bundle artifact
-        uses: actions/upload-artifact@v2
+          tag_name: v${{ github.run_number }}
+          release_name: Release ${{ github.run_number }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.TOKEN }}
         with:
-          name: appbundle
-          path: build/app/outputs/bundle/release/app-release.aab
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: build/app/outputs/flutter-apk/app-release.apk
+          asset_name: app-release.apk
+          asset_content_type: application/octet-stream
